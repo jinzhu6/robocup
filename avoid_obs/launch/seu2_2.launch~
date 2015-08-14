@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find hector_geotiff)/launch/geotiff_mapper.launch"/>
+	<node pkg="navigation2" type="navigation2" respawn="true" name="navigation2" output="screen" />
+
+</launch>

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find hector_exploration_node)/launch/seu_exploration_planner.launch"/>	
+	<node pkg="hector_map_server1" type="hector_map_server1" respawn="true" name="hector_map_server1" output="screen" />	
+<!--	<node pkg="thermal_find" type="thermal_find" respawn="true" name="thermal_find" output="screen" />  -->
+
+-	<include file="$(find thermal_find)/launch/hector_object_tracker.launch"/>  
+<!--	<node pkg="qrcode_identifier" type="qrcode_identifier" respawn="true" name="qrcode_identifier" output="screen" />   -->
+
+</launch>

@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+<!--	<node pkg="victim_finder" type="victim_finder" respawn="true" name="victim_finder" output="screen" />  -->
+	<node pkg="hector_map_server1" type="hector_map_server1" respawn="true" name="hector_map_server1" output="screen" />
+<!--	<include file="$(find VictimMarker1)/launch/hector_object_tracker.launch"/>  -->
+	<node pkg="qrcode_identifier" type="qrcode_identifier" respawn="true" name="qrcode_identifier" output="screen" />
+
+</launch>

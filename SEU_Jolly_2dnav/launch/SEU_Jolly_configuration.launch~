@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+
+<launch>
+  <node pkg="learning_tf" type="laser_scan_publisher" name="laser_scan_publisher" output="screen" />
+
+  <node pkg="setup_gmapping" type="pub_odometry" name="pub_odometry" output="screen" />
+
+  <node pkg="tf" type="static_transform_publisher" name="baselink_baselaser" args="-0.2 -0.12 0.6 0 0 0 base_link base_laser 100" />
+  <node pkg="tf" type="static_transform_publisher" name="world_map" args="0 0 0 0 0 0 world map 100" />
+
+</launch>

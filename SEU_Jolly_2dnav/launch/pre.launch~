@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find setup_gmapping)/launch/gmapping_setup.launch"/>    
+<!--	<include file="$(find hector_mapping)/launch/mapping_default.launch"/>   --> 
+
+  	<env name="ROS_MASTER_URI" value="http://192.168.1.53:11311"/>
+	<include file="$(find audio_play)/launch/play.launch" >
+		
+	</include>
+</launch>

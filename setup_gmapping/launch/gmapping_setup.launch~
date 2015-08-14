@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+
+<launch>
+<node pkg="tf" type="static_transform_publisher" name="baselink_baselaser" args="0.37 0 0 0 0 0 base_link base_laser 100" />   <!-- 0.15 0.08 0.44   -->
+<node pkg="tf" type="static_transform_publisher" name="world_map" args="0 0 0 0 0 0 world map 100" />
+<!--
+<node pkg="learning_tf" type="laser_scan_publisher" name="laser_scan_publisher" />
+<node pkg="setup_gmapping" type="pub_odometry_with_roll" name="pub_odometry_with_roll" />
+-->
+<node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" >
+	<param name="base_frame" value="base_link" />	
+	<param name="map_frame" value="map" />
+	<param name="odom_frame" value="odom" />
+	<param name="maxUrange" value="5.0" />
+	<param name="linearUpdate" value="0.5" />
+	<param name="angularUpdate" value="0.5" />
+	<param name="xmin" value="-30.0" />
+	<param name="xmax" value="30.0" />
+	<param name="ymin" value="-30.0" />
+	<param name="ymax" value="30.0" />
+	<param name="delta" value="0.04" />
+	<param name="map_update_interval" value="1.0"/>    <!-- -->
+	<param name="particles" value="30"/>
+</node>
+
+<!-- <node pkg="rviz" type="rviz" name="rviz" /> -->
+<!--
+<node pkg="hector_map_server" type="hector_map_server" name="hector_map_server" output="screen" respawn="true" launch-prefix="nice -n 15"> -->
+   <!-- <remap from="map" to="scanmatcher_map" />-->
+<!--</node> -->
+
+</launch>

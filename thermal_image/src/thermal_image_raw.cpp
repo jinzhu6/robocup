@@ -1,0 +1,236 @@
+#include "ros/ros.h"
+#include <image_transport/image_transport.h>
+#include <string.h>
+
+#include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/image_encodings.h>
+#include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include "std_srvs/Empty.h"
+
+#include <vector>
+#include <string>
+/**
+ * Optris device interface
+ */
+#include "PIImager.h"
+
+/**
+ * Optris image converter
+ */
+#include "ImageBuilder.h"
+
+#include <iostream>
+using namespace std;
+using namespace optris;
+using namespace cv;
+#define WIDTH    160
+#define HEIGHT   120
+double _min_tmp;
+double _max_tmp;
+
+unsigned char* _bufferThermal = NULL;
+optris::PIImager* _imager;
+optris::ImageBuilder* _iBuilder;
+image_transport::Publisher*  thermal_pub_bin;
+Mat cv_img_bin = Mat::zeros(WIDTH, HEIGHT, CV_8UC1);
+
+ros::ServiceClient find_thermal_client;
+ros::ServiceClient goto_thermal_client;
+
+std_srvs::Empty find_thermal_srv;
+
+Vector<Rect> findregion(Mat image)
+{
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+	Mat con;
+	Vector<Rect> rects;
+	findContours(image, contours, hierarchy, CV_RETR_CCOMP, CV_CHAIN_APPROX_SIMPLE);
+	if (contours.size() > 0)
+	{
+		for (int idx = 0; idx >= 0; idx = hierarchy[idx][0])
+		{
+			Rect rect = boundingRect(contours[idx]);
+			float rateofhw = float(rect.height) / float(rect.width);
+			con = Mat::zeros(image.size(), CV_8UC1);
+			if (rateofhw<4.&&rateofhw>0.25)
+			{
+				drawContours(con, contours, idx, Scalar(1), CV_FILLED, 8, hierarchy);
+				if (countNonZero(con) > 10)
+					rects.push_back(rect);
+
+			} 
+			// rects.push_back(rect);
+		}
+	}
+	return rects;
+}
+
+void draw_rect_on(Mat& final_image) {
+
+	Mat element = getStructuringElement(MORPH_RECT, Size(4, 4));
+	dilate(cv_img_bin, cv_img_bin, element);
+	element = getStructuringElement(MORPH_RECT, Size(5, 5));
+	erode(cv_img_bin, cv_img_bin, element);
+	Vector<Rect> rects = findregion(cv_img_bin);
+	if (rects.size())
+	{
+		
+		find_thermal_client.call(find_thermal_srv);
+		goto_thermal_client.call(find_thermal_srv);
+		Rect rect;
+		for (uchar i = 0; i < rects.size(); i++)
+		{
+			rect.x = rects[i].x;
+			rect.y = rects[i].y;
+			rect.height = rects[i].height;
+			rect.width = rects[i].width;
+			rectangle(final_image, rect, Scalar(255, 0, 0), 2);
+		}
+	}		
+}
+
+void cbOnThermalFrame(unsigned short* image, unsigned int w, unsigned int h)
+{
+    _iBuilder->setData(w, h, image);
+    if(_bufferThermal==NULL)
+      _bufferThermal = new unsigned char[w * h*3];
+    _iBuilder->convertTemperatureToPaletteImage(_bufferThermal);
+
+
+    unsigned char* p_cv_bin = cv_img_bin.data;
+
+    for(unsigned int i=0; i<w * h; i++)
+    {       
+	double temp = _iBuilder->getTemperatureAt(i);
+	if(temp >= _min_tmp && temp <= _max_tmp) *p_cv_bin = 0xff;
+	else *p_cv_bin = 0;
+
+	++p_cv_bin;
+     }	   
+
+  static int frame1 = 0;
+  sensor_msgs::Image img_binary;
+  img_binary.header.frame_id = "thermal_binary";
+  img_binary.height 	       = h;
+  img_binary.width 	       = w;
+  img_binary.encoding        = "mono8";
+  img_binary.step            = w;
+  img_binary.data.resize(img_binary.height*img_binary.step);
+  img_binary.header.seq      = ++frame1;
+  img_binary.header.stamp    = ros::Time::now();
+// draw_rect_on(cv_img_bin);
+  memcpy(&img_binary.data[0], cv_img_bin.data, 160*120);
+
+  thermal_pub_bin->publish(img_binary);
+
+    static int frame = 0;
+    if((++frame)%80==0)
+    {
+        cout << "Frame rate: " << _imager->getAverageFramerate() << " fps" << endl;
+
+ /*   	cout << "data:" ;
+    	for(unsigned int i=0; i<w * h; i++)
+  	{
+         
+
+		double temp = _iBuilder->getTemperatureAt(i);
+		cout << temp << " ";
+  	}
+ 	cout << endl;  */
+
+    }
+}
+
+int main (int argc, char* argv[])
+{	
+	ros::init (argc, argv, "thermal_image_raw_node");
+
+	  ros::NodeHandle n_("~");
+	  // parameters for initialization
+	  n_.param("min_tmp", _min_tmp, 30.0);
+	  n_.param("max_tmp", _max_tmp, 40.0);
+	  double _manual_min, _manual_max;
+	  string _xml_config;
+	  n_.param("manual_min", _manual_min, 20.0);
+	  n_.param("manual_max", _manual_max, 40.0);
+	  n_.param("xml_config", _xml_config, string("/home/peng/catkin_ws/src/thermal_image/config/14091011.xml"));
+
+        ros::NodeHandle n;
+        image_transport::ImageTransport it(n);
+	image_transport::Publisher  _pubThermal = it.advertise("thermal_image_raw", 1);
+
+    	image_transport::Publisher  pubThermal_bin = it.advertise("thermal_image_bin", 1);
+	thermal_pub_bin = &pubThermal_bin;
+
+	find_thermal_client = n.serviceClient<std_srvs::Empty>("find_thermal");
+	goto_thermal_client = n.serviceClient<std_srvs::Empty>("goto_thermal");
+
+  /**
+   * Initialize Optris image processing chain
+   */
+  _imager = new PIImager(_xml_config.c_str());
+  if(_imager->getWidth()==0 || _imager->getHeight()==0)
+  {
+    cout << "Error: Image streams not available or wrongly configured. Check connection of camera and config file." << endl;
+    return -1;
+  }
+
+  cout << "Thermal channel: " << _imager->getWidth() << "x" << _imager->getHeight() << "@" << _imager->getFramerate() << "Hz" << endl;
+
+  unsigned char* bufferRaw = new unsigned char[_imager->getRawBufferSize()];
+
+  _imager->setFrameCallback(cbOnThermalFrame);
+
+  _iBuilder = new ImageBuilder();
+  _iBuilder->setPaletteScalingMethod(eManual);
+  _iBuilder->setPalette(eGrayBW);
+  _iBuilder->setManualTemperatureRange(_manual_min, _manual_max);
+  _imager->startStreaming();
+  /**
+   * Enter endless loop in order to pass raw data to Optris image processing library.
+   * Processed data are supported by the frame callback function.
+   */
+	unsigned int   _frame = 0;
+	sensor_msgs::Image img;
+	img.header.frame_id = "thermal_image_raw";
+	img.height  = HEIGHT;
+	img.width   = WIDTH;
+	img.encoding        = "rgb8";
+	img.step            = WIDTH*3;
+	img.data.resize(img.height*img.step);
+
+   while(ros::ok())   
+  {
+    _imager->getFrame(bufferRaw);
+    _imager->process(bufferRaw);
+
+    if(_bufferThermal != NULL)
+    {	    
+//       	if(_pubThermal.getNumSubscribers() == 0)
+//    			continue;
+		img.header.seq      = ++_frame;
+  		img.header.stamp    = ros::Time::now();
+		memcpy(&img.data[0], _bufferThermal, 160*120*3);
+		cv_bridge::CvImagePtr cv_ptr;
+     		cv_ptr = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::RGB8);
+     		Mat img_final(cv_ptr->image);
+		draw_rect_on(img_final);
+		_pubThermal.publish(cv_ptr->toImageMsg());
+    }	 
+   usleep(16000);  //大概55hz
+
+    _imager->releaseFrame();
+  }
+
+  delete [] bufferRaw;
+  if(_bufferThermal) delete [] _bufferThermal;
+
+  delete _imager;
+  delete _iBuilder;
+
+  cout << "Exiting application" << endl;
+}

@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+	<node pkg="robocup2014" type="robocup2014URG04" respawn="true" name="robocup2014URG04" output="screen" />  
+<!--	<node pkg="robocup2014" type="robocup2014UTM30_odom" respawn="true" name="robocup2014UTM30_odom" output="screen" />   -->
+<!--	<node pkg="robocup2014" type="offline_utm30lx" respawn="true" name="offline_utm30lx" output="screen" />  -->
+
+	<include file="$(find thermal_image)/launch/thermal_image.launch"/> 
+<!--	<include file="$(find openni_launch)/launch/openni.launch"/>  -->
+
+	<include file="$(find audio_capture)/launch/capture.launch"/> 
+	<node pkg="co2_detection" type="co2_detection_node" respawn="true" name="co2_detection_node"/> 
+</launch>

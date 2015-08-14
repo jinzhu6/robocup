@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<launch>
+
+<node pkg="thermal_image" type="thermal_image_raw" name="thermal_image_raw" >
+	<param name="min_tmp" value="35.0" />
+	<param name="max_tmp" value="40.0" />
+	<param name="manual_min" value="25.0" />
+	<param name="manual_max" value="40.0" />
+	<param name="xml_config" value="/home/robocup/catkin_ws/src/thermal_image/config/14091011.xml" />
+</node>
+	
+
+</launch>

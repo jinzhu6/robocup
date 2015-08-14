@@ -1,0 +1,66 @@
+#include <opencv2/objdetect/objdetect.hpp>
+#include "image_converter.h" 
+
+void detect_human(cv::Mat image);
+
+int main(int argc, char** argv)
+{
+	ros::init(argc, argv, "opencv_hog_kinect");
+	ros::NodeHandle nh;
+	ImageConverter kinect_image(nh);  
+
+	cv::Mat image;
+        cv::namedWindow("原始图片");
+	cv::namedWindow("处理后的图像");
+	while(ros::ok())
+	{
+		image = kinect_image.get_image(); 
+		if(!image.empty())
+		{
+			cv::imshow("原始图片", image);	
+
+		}	
+       
+
+		if(!image.empty())
+		{
+
+		//	detect_human(image);	
+			cv::imshow("处理后的图像", image);	
+		}
+
+		ros::spinOnce();
+	}
+	        return 0;
+
+}
+void detect_human(cv::Mat image)
+{
+	std::vector<cv::Rect> found, found_filtered;
+	cv::HOGDescriptor people_detect_hog;
+	people_detect_hog.setSVMDetector(cv::HOGDescriptor::getDefaultPeopleDetector());
+	people_detect_hog.detectMultiScale(image,found, 0, cv::Size(8,8), cv::Size(32,32), 1.05, 2);
+	for(uint i =0; i < found.size(); i++)
+	{
+		cv::Rect r = found[i];
+		uint j = 0;
+		for(; j < found.size(); j++)
+		{
+			if(j != i && ((r & found[j]) == r))
+				break;
+		}
+		if(j == found.size())
+			found_filtered.push_back(r);
+
+	}
+
+	for(uint i = 0; i<found_filtered.size(); i++)
+	{
+		cv::Rect r = found_filtered[i];
+		r.x += cvRound(r.width*0.1);
+		r.width = cvRound(r.width*0.8);
+		r.y += cvRound(r.height*0.07);
+		r.height = cvRound(r.height*0.8);
+		cv::rectangle(image, r.tl(), r.br(), cv::Scalar(255,0,0), 3);	
+	}
+}

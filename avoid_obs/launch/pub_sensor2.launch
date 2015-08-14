@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<launch>
+	<node pkg="robocup2014" type="robocup2014URG04" respawn="true" name="robocup2014URG04" output="screen" />
+
+<!--	<include file="$(find openni_launch)/launch/openni.launch"/>
+-->
+
+</launch>

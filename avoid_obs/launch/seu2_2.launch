@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find hector_geotiff)/launch/geotiff_mapper.launch"/>
+	<node pkg="avoid_obs" type="avoid_obs_node" respawn="true" name="avoid_obs_node" output="screen" />
+
+</launch>

@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find audio_capture)/launch/capture.launch"/>
+
+	<env name="ROS_MASTER_URI" value="http://192.168.1.127:11311"/>
+	<node pkg="rviz" type="rviz" name="rviz" />
+	<node pkg="rqt_plot" type="rqt_plot" name="rqt_plot" />
+
+ 
+	<node pkg="move_detection" type="move_detection" name="move_detection" />
+	<include file="$(find audio_play)/launch/play.launch"/>
+
+	<node pkg="victimMarker_auto" type="victimmarker_auto" name="victimmarker_auto" output="screen"/>
+</launch>

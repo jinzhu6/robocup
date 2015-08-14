@@ -1,0 +1,3 @@
+digraph G {
+"base_link" -> "base_laser"[label="Broadcaster: /baselink_baselaser\nAverage rate: 10.189 Hz\nMost recent transform: 1393470490.830 \nBuffer length: 4.809 sec\n"];
+}
